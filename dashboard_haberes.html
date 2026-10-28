@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Haberes 2026 · Municipalidad</title>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --primary: #0f4c75;
+    --primary-dark: #0a3a5c;
+    --accent: #3282b8;
+    --accent-light: #bbe1fa;
+    --bg: #f1f5f9;
+    --card-bg: #ffffff;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #ea580c;
+    --danger: #dc2626;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ============ HEADER ============ */
+  header.app-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 18px 28px;
+    box-shadow: var(--shadow-lg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-icon {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .brand-text h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .brand-text .subtitle {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .file-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.12);
+    padding: 6px 8px 6px 16px;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+  }
+  .file-controls .file-info {
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  .file-controls .file-info strong { color: var(--accent-light); font-weight: 600; }
+  .btn-upload {
+    background: white;
+    color: var(--primary);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-upload:hover { background: var(--accent-light); transform: translateY(-1px); }
+  .btn-upload input { display: none; }
+  .loading-dot {
+    width: 8px; height: 8px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* ============ LAYOUT ============ */
+  .container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px 28px 60px;
+  }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--accent);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .kpi-card .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .kpi-card .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.15;
+  }
+  .kpi-card .kpi-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .kpi-card.primary { border-left-color: var(--primary); }
+  .kpi-card.success { border-left-color: var(--success); }
+  .kpi-card.warning { border-left-color: var(--warning); }
+  .kpi-card.accent { border-left-color: var(--accent); }
+  .kpi-card .kpi-icon {
+    position: absolute;
+    right: 14px; top: 14px;
+    font-size: 28px;
+    opacity: 0.15;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--card-bg);
+    padding: 6px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { background: var(--bg); color: var(--primary); }
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(15, 76, 117, 0.3);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .card-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-dark);
+  }
+  .card-header .card-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .card-body { padding: 20px 22px; }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 1100px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .chart-box { width: 100%; height: 380px; }
+  .chart-box.tall { height: 480px; }
+  .chart-box.short { height: 300px; }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 600px;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.data-table thead th {
+    background: #f8fafc;
+    color: var(--primary-dark);
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  table.data-table thead th:hover { background: #eef2f7; }
+  table.data-table thead th .sort-icon { font-size: 10px; opacity: 0.5; margin-left: 4px; }
+  table.data-table tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  table.data-table tbody tr:hover { background: #f8fafc; }
+  table.data-table tbody tr:nth-child(even) { background: #fafbfc; }
+  table.data-table tbody tr:nth-child(even):hover { background: #f1f5f9; }
+  table.data-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+  table.data-table td.num.positive { color: var(--success); }
+  table.data-table .highlight-row { background: #fff7ed !important; }
+  table.data-table .highlight-row:hover { background: #fff7ed !important; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--accent-light);
+    color: var(--primary-dark);
+  }
+  .badge.warning { background: #fff7ed; color: var(--warning); }
+  .badge.success { background: #dcfce7; color: var(--success); }
+  .badge.primary { background: #dbeafe; color: var(--primary); }
+
+  /* Search input */
+  .search-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .search-input, .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background: white;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .search-input { min-width: 240px; }
+  .search-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(50, 130, 184, 0.12);
+  }
+  .result-count {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .result-count strong { color: var(--primary); font-weight: 700; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--primary-dark);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--danger); }
+  .toast.success { background: var(--success); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+  .empty-state h3 {
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--accent-light);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  footer.app-footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  footer.app-footer strong { color: var(--primary); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">&#128202;</div>
+      <div class="brand-text">
+        <h1>Dashboard de Haberes 2026</h1>
+        <div class="subtitle">Municipalidad · Análisis de Sueldos y Cargos</div>
+      </div>
+    </div>
+    <div class="file-controls">
+      <div class="loading-dot" id="loadingDot"></div>
+      <div class="file-info" id="fileInfo">
+        Cargando <strong>Haberes2026.xlsx</strong>...
+      </div>
+      <label class="btn-upload">
+        &#128193; Cargar Excel
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+      </label>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card primary">
+      <div class="kpi-label">Total Haberes Brutos</div>
+      <div class="kpi-value" id="kpiTotalBruto">--</div>
+      <div class="kpi-sub" id="kpiTotalBrutoSub">Sumatoria de todas las secretarías</div>
+      <div class="kpi-icon">&#128176;</div>
+    </div>
+    <div class="kpi-card accent">
+      <div class="kpi-label">Cantidad de Secretarías</div>
+      <div class="kpi-value" id="kpiSecretarias">--</div>
+      <div class="kpi-sub" id="kpiSecretariasSub">Áreas de gobierno</div>
+      <div class="kpi-icon">&#127970;</div>
+    </div>
+    <div class="kpi-card success">
+      <div class="kpi-label">Tipos de Cargos</div>
+      <div class="kpi-value" id="kpiCargos">--</div>
+      <div class="kpi-sub" id="kpiCargosSub">Categorías escalafonarias</div>
+      <div class="kpi-icon">&#128100;</div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-label">Empleados en Detalle</div>
+      <div class="kpi-value" id="kpiEmpleados">--</div>
+      <div class="kpi-sub" id="kpiEmpleadosSub">Registros en Hoja1</div>
+      <div class="kpi-icon">&#128203;</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sueldo Bruto Promedio</div>
+      <div class="kpi-value" id="kpiPromedio">--</div>
+      <div class="kpi-sub" id="kpiPromedioSub">Sobre Hoja1 detallado</div>
+      <div class="kpi-icon">&#128202;</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="resumen">&#128202; Resumen General</button>
+    <button class="tab-btn" data-tab="secretarias">&#127970; Por Secretaría</button>
+    <button class="tab-btn" data-tab="cargos">&#128100; Por Cargo</button>
+    <button class="tab-btn" data-tab="empleados">&#128203; Empleados</button>
+  </nav>
+
+  <!-- TAB: Resumen -->
+  <div class="tab-panel active" id="tab-resumen">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Distribución del Sueldo Bruto por Secretaría</h3>
+            <div class="card-subtitle">Top 10 áreas por monto total (Hoja2)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartSecretariasBar" class="chart-box"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Composición Porcentual por Secretaría</h3>
+            <div class="card-subtitle">Participación sobre el total (Hoja2)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartSecretariasPie" class="chart-box"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Top 15 Cargos por Sueldo Bruto Total</h3>
+          <div class="card-subtitle">Categorías con mayor masa salarial (Hoja3)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chartTopCargos" class="chart-box tall"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Secretarías -->
+  <div class="tab-panel" id="tab-secretarias">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Listado Completo de Secretarías</h3>
+          <div class="card-subtitle">Masa salarial bruta por área de gobierno · Hoja2</div>
+        </div>
+        <div class="search-box">
+          <input type="text" class="search-input" id="searchSecretarias" placeholder="Buscar secretaría...">
+          <span class="result-count"><strong id="secretariasCount">0</strong> registros</span>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table class="data-table" id="tableSecretarias">
+            <thead>
+              <tr>
+                <th data-sort="idx">#</th>
+                <th data-sort="nombre">Secretaría</th>
+                <th data-sort="total" data-num="true" style="text-align:right;">Sueldo Bruto Total</th>
+                <th data-sort="participacion" data-num="true" style="text-align:right;">% Participación</th>
+                <th data-sort="grafico" style="min-width:200px;">Representación</th>
+              </tr>
+            </thead>
+            <tbody id="tbodySecretarias"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Cargos -->
+  <div class="tab-panel" id="tab-cargos">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Top 20 Cargos por Masa Salarial</h3>
+            <div class="card-subtitle">Sueldo bruto total acumulado (Hoja3)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartTopCargosBar" class="chart-box tall"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Mayores Brechas Salariales</h3>
+            <div class="card-subtitle">Top 10 cargos con mayor diferencia Mínimo ↔ Máximo</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartBrechas" class="chart-box tall"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Listado Completo de Cargos</h3>
+          <div class="card-subtitle">Estadísticas TOTAL · MÍNIMO · MÁXIMO · Hoja3</div>
+        </div>
+        <div class="search-box">
+          <input type="text" class="search-input" id="searchCargos" placeholder="Buscar cargo..." style="min-width:300px;">
+          <select class="filter-select" id="filterCargos">
+            <option value="">Todos los rangos</option>
+            <option value="small">&lt; $1.000.000</option>
+            <option value="medium">$1M - $10M</option>
+            <option value="large">$10M - $100M</option>
+            <option value="xlarge">&gt; $100M</option>
+          </select>
+          <span class="result-count"><strong id="cargosCount">0</strong> registros</span>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap" style="max-height:560px;">
+          <table class="data-table" id="tableCargos">
+            <thead>
+              <tr>
+                <th data-sort="idx">#</th>
+                <th data-sort="nombre">Cargo</th>
+                <th data-sort="total" data-num="true" style="text-align:right;">Total</th>
+                <th data-sort="minimo" data-num="true" style="text-align:right;">Mínimo</th>
+                <th data-sort="maximo" data-num="true" style="text-align:right;">Máximo</th>
+                <th data-sort="brecha" data-num="true" style="text-align:right;">Brecha</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCargos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Empleados -->
+  <div class="tab-panel" id="tab-empleados">
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Por Secretaría</h3>
+            <div class="card-subtitle">Distribución de empleados detallados</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartEmpSecretarias" class="chart-box short"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Por Cargo</h3>
+            <div class="card-subtitle">Distribución por cargo resumido</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartEmpCargos" class="chart-box short"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Por Año de Ingreso</h3>
+            <div class="card-subtitle">Antigüedad del personal</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartEmpAnios" class="chart-box short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Rangos Salariales</h3>
+          <div class="card-subtitle">Distribución de sueldos brutos (Hoja1)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chartEmpRangos" class="chart-box"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Listado de Empleados</h3>
+          <div class="card-subtitle">Detalle individual de Hoja1 · ordenable y filtrable</div>
+        </div>
+        <div class="search-box">
+          <input type="text" class="search-input" id="searchEmpleados" placeholder="Buscar por nombre o cargo...">
+          <select class="filter-select" id="filterEmpleadosSec">
+            <option value="">Todas las secretarías</option>
+          </select>
+          <span class="result-count"><strong id="empleadosCount">0</strong> registros</span>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table class="data-table" id="tableEmpleados">
+            <thead>
+              <tr>
+                <th data-sort="idx">#</th>
+                <th data-sort="nombre">Nombre y Apellido</th>
+                <th data-sort="cargo">Cargo</th>
+                <th data-sort="secretaria">Secretaría</th>
+                <th data-sort="bruto" data-num="true" style="text-align:right;">Sueldo Bruto</th>
+                <th data-sort="neto" data-num="true" style="text-align:right;">Sueldo Neto</th>
+                <th data-sort="retencion" data-num="true" style="text-align:right;">Retención</th>
+                <th data-sort="ingreso" style="text-align:right;">Fecha Ingreso</th>
+                <th data-sort="antiguedad" data-num="true" style="text-align:right;">Antigüedad</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyEmpleados"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-weight:600;color:var(--primary-dark);">Procesando Excel...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="app-footer">
+  Dashboard generado dinámicamente desde <strong>Haberes2026.xlsx</strong> ·
+  Datos procesados 100% en el navegador con SheetJS + ECharts
+</footer>
+
+<script>
+/* =========================================================
+   ESTADO GLOBAL
+   ========================================================= */
+const STATE = {
+  workbook: null,
+  sheet1: [],   // empleados detallados
+  sheet2: [],   // secretarías con totales
+  sheet3: [],   // cargos con estadísticas
+  sortSecretarias: { col: 'total', dir: 'desc' },
+  sortCargos: { col: 'total', dir: 'desc' },
+  sortEmpleados: { col: 'bruto', dir: 'desc' },
+  charts: {}
+};
+
+const COLORS = {
+  primary: '#0f4c75',
+  primaryDark: '#0a3a5c',
+  accent: '#3282b8',
+  accentLight: '#bbe1fa',
+  success: '#16a34a',
+  warning: '#ea580c',
+  danger: '#dc2626',
+  palette: [
+    '#0f4c75', '#3282b8', '#bbe1fa', '#16a34a', '#84cc16',
+    '#eab308', '#ea580c', '#dc2626', '#9333ea', '#6366f1',
+    '#0891b2', '#0d9488', '#65a30d', '#ca8a04', '#c2410c'
+  ]
+};
+
+const EXCEL_FILENAME = 'Haberes2026.xlsx';
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+function fmtMoney(n) {
+  if (n == null || isNaN(n)) return '—';
+  return '$ ' + Number(n).toLocaleString('es-AR', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function fmtMoneyCompact(n) {
+  if (n == null || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return '$ ' + (n / 1e9).toFixed(2) + ' B';
+  if (abs >= 1e6) return '$ ' + (n / 1e6).toFixed(2) + ' M';
+  if (abs >= 1e3) return '$ ' + (n / 1e3).toFixed(1) + ' K';
+  return '$ ' + n.toFixed(0);
+}
+
+function fmtPct(n, total) {
+  if (!n || !total) return '0,00%';
+  return (n / total * 100).toFixed(2).replace('.', ',') + '%';
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  if (d instanceof Date) {
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  return String(d);
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast ' + type, 3000);
+}
+
+/* =========================================================
+   LECTURA DEL EXCEL
+   ========================================================= */
+async function loadExcelFromUrl(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('No se pudo descargar el Excel (HTTP ' + res.status + ')');
+  return await res.arrayBuffer();
+}
+
+async function loadExcelFromInput(file) {
+  return await file.arrayBuffer();
+}
+
+function processWorkbook(buf) {
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+  STATE.workbook = wb;
+
+  // Sheet1: empleados - header en fila 1, datos desde fila 2
+  const ws1 = XLSX.utils.sheet_to_json(wb.Sheets['Sheet1'], { header: 1, defval: null });
+  STATE.sheet1 = [];
+  for (let i = 1; i < ws1.length; i++) {
+    const row = ws1[i];
+    if (!row || !row[0]) continue;
+    const bruto = parseFloat(String(row[1]).replace(/[^0-9.-]/g, '')) || 0;
+    const neto = parseFloat(String(row[2]).replace(/[^0-9.-]/g, '')) || 0;
+    let fecha = row[3];
+    if (typeof fecha === 'string' && fecha) {
+      const d = new Date(fecha);
+      if (!isNaN(d.getTime())) fecha = d;
+    } else if (fecha instanceof Date) {
+      // ya es Date por cellDates
+    } else if (typeof fecha === 'number') {
+      // fecha serial de Excel - convertir
+      const d = XLSX.SSF ? new Date((fecha - 25569) * 86400 * 1000) : new Date(fecha);
+      if (!isNaN(d.getTime())) fecha = d;
+    }
+    STATE.sheet1.push({
+      nombre: String(row[0]).trim(),
+      bruto, neto,
+      retencion: bruto - neto,
+      fecha,
+      cargo: String(row[4] || '').trim(),
+      secretaria: String(row[5] || '').trim()
+    });
+  }
+
+  // Sheet2: secretarías (cols: B = nombre, C = total)
+  const ws2 = XLSX.utils.sheet_to_json(wb.Sheets['Sheet2'], { header: 1, defval: null });
+  STATE.sheet2 = [];
+  for (const row of ws2) {
+    if (!row) continue;
+    const nombre = row[1];
+    const total = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''));
+    if (nombre && !isNaN(total) && String(nombre).toUpperCase() !== 'GRAND TOTAL' && String(nombre).toUpperCase() !== 'ROW LABELS') {
+      STATE.sheet2.push({ nombre: String(nombre).trim(), total });
+    }
+  }
+
+  // Sheet3: cargos (header en fila 2; cols: A=nombre, B=total, C=min, D=max)
+  const ws3 = XLSX.utils.sheet_to_json(wb.Sheets['Sheet3'], { header: 1, defval: null });
+  STATE.sheet3 = [];
+  for (let i = 2; i < ws3.length; i++) {
+    const row = ws3[i];
+    if (!row) continue;
+    const nombre = row[0];
+    const total = parseFloat(String(row[1]).replace(/[^0-9.-]/g, ''));
+    const min = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''));
+    const max = parseFloat(String(row[3]).replace(/[^0-9.-]/g, ''));
+    if (nombre && !isNaN(total) && String(nombre).toUpperCase() !== 'GRAND TOTAL') {
+      STATE.sheet3.push({
+        nombre: String(nombre).trim(),
+        total, min, max,
+        brecha: (max || 0) - (min || 0)
+      });
+    }
+  }
+
+  // ordenar por defecto
+  STATE.sheet2.sort((a, b) => b.total - a.total);
+  STATE.sheet3.sort((a, b) => b.total - a.total);
+  STATE.sheet1.sort((a, b) => b.bruto - a.bruto);
+}
+
+/* =========================================================
+   RENDER KPIs
+   ========================================================= */
+function renderKPIs() {
+  const totalBruto = STATE.sheet2.reduce((s, r) => s + r.total, 0);
+  const nSec = STATE.sheet2.length;
+  const nCargos = STATE.sheet3.length;
+  const nEmp = STATE.sheet1.length;
+  const promedio = nEmp ? STATE.sheet1.reduce((s, r) => s + r.bruto, 0) / nEmp : 0;
+
+  document.getElementById('kpiTotalBruto').textContent = fmtMoneyCompact(totalBruto);
+  document.getElementById('kpiTotalBrutoSub').textContent = fmtMoney(totalBruto);
+  document.getElementById('kpiSecretarias').textContent = nSec;
+  document.getElementById('kpiSecretariasSub').textContent = 'Áreas de gobierno activas';
+  document.getElementById('kpiCargos').textContent = nCargos;
+  document.getElementById('kpiCargosSub').textContent = 'Categorías escalafonarias';
+  document.getElementById('kpiEmpleados').textContent = nEmp;
+  document.getElementById('kpiEmpleadosSub').textContent = 'Registros en detalle (Hoja1)';
+  document.getElementById('kpiPromedio').textContent = fmtMoneyCompact(promedio);
+  document.getElementById('kpiPromedioSub').textContent = fmtMoney(promedio);
+}
+
+/* =========================================================
+   GRÁFICOS - Resumen
+   ========================================================= */
+function renderChartSecretariasBar() {
+  const el = document.getElementById('chartSecretariasBar');
+  if (!el) return;
+  const data = STATE.sheet2.slice(0, 10);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => {
+        const v = p[0];
+        return `<b>${v.name}</b><br/>Sueldo Bruto: <b>${fmtMoney(v.value)}</b>`;
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => {
+        const n = d.nombre;
+        return n.length > 22 ? n.slice(0, 20) + '…' : n;
+      }),
+      axisLabel: {
+        rotate: 35,
+        fontSize: 10,
+        color: '#64748b',
+        interval: 0
+      },
+      axisLine: { lineStyle: { color: '#cbd5e1' } }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: v => fmtMoneyCompact(v),
+        color: '#64748b',
+        fontSize: 11
+      },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map((d, i) => ({
+        value: d.total,
+        itemStyle: { color: COLORS.palette[i % COLORS.palette.length] }
+      })),
+      barWidth: '55%',
+      label: {
+        show: true,
+        position: 'top',
+        formatter: p => fmtMoneyCompact(p.value),
+        fontSize: 10,
+        color: '#0f4c75',
+        fontWeight: 600
+      }
+    }]
+  });
+  STATE.charts.secretariasBar = chart;
+}
+
+function renderChartSecretariasPie() {
+  const el = document.getElementById('chartSecretariasPie');
+  if (!el) return;
+  const data = STATE.sheet2.map((d, i) => ({
+    name: d.nombre,
+    value: d.total,
+    itemStyle: { color: COLORS.palette[i % COLORS.palette.length] }
+  }));
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `<b>${p.name}</b><br/>${fmtMoney(p.value)} (${p.percent}%)`
+    },
+    legend: {
+      type: 'scroll',
+      orient: 'vertical',
+      right: '2%',
+      top: 'middle',
+      bottom: 10,
+      textStyle: { fontSize: 10, color: '#64748b' },
+      formatter: name => name.length > 28 ? name.slice(0, 26) + '…' : name
+    },
+    series: [{
+      type: 'pie',
+      radius: ['38%', '68%'],
+      center: ['38%', '50%'],
+      avoidLabelOverlap: true,
+      itemStyle: { borderColor: '#fff', borderWidth: 2 },
+      label: {
+        show: true,
+        formatter: '{d}%',
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#0f4c75'
+      },
+      labelLine: { length: 8, length2: 8 },
+      data
+    }]
+  });
+  STATE.charts.secretariasPie = chart;
+}
+
+function renderChartTopCargos() {
+  const el = document.getElementById('chartTopCargos');
+  if (!el) return;
+  const data = STATE.sheet3.slice(0, 15);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => {
+        const v = p[0];
+        return `<b>${v.name}</b><br/>Total: <b>${fmtMoney(v.value)}</b>`;
+      }
+    },
+    grid: { left: '3%', right: '6%', bottom: '3%', top: '3%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: v => fmtMoneyCompact(v),
+        color: '#64748b',
+        fontSize: 11
+      },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: data.map(d => {
+        const n = d.nombre;
+        return n.length > 45 ? n.slice(0, 43) + '…' : n;
+      }).reverse(),
+      axisLabel: { color: '#475569', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#cbd5e1' } }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.total).reverse(),
+      barWidth: '60%',
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#bbe1fa' },
+          { offset: 1, color: '#0f4c75' }
+        ])
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: p => fmtMoneyCompact(p.value),
+        fontSize: 10,
+        color: '#0f4c75',
+        fontWeight: 600
+      }
+    }]
+  });
+  STATE.charts.topCargos = chart;
+}
+
+/* =========================================================
+   GRÁFICOS - Cargos
+   ========================================================= */
+function renderChartTopCargosBar() {
+  const el = document.getElementById('chartTopCargosBar');
+  if (!el) return;
+  const data = STATE.sheet3.slice(0, 20);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => `<b>${p[0].name}</b><br/>Total: <b>${fmtMoney(p[0].value)}</b>`
+    },
+    grid: { left: '3%', right: '6%', bottom: '3%', top: '3%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { formatter: v => fmtMoneyCompact(v), color: '#64748b' },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: data.map(d => {
+        const n = d.nombre;
+        return n.length > 42 ? n.slice(0, 40) + '…' : n;
+      }).reverse(),
+      axisLabel: { color: '#475569', fontSize: 9 },
+      axisLine: { lineStyle: { color: '#cbd5e1' } }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.total).reverse(),
+      barWidth: '60%',
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#84cc16' },
+          { offset: 1, color: '#16a34a' }
+        ])
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: p => fmtMoneyCompact(p.value),
+        fontSize: 10,
+        color: '#15803d',
+        fontWeight: 600
+      }
+    }]
+  });
+  STATE.charts.topCargosBar = chart;
+}
+
+function renderChartBrechas() {
+  const el = document.getElementById('chartBrechas');
+  if (!el) return;
+  const data = STATE.sheet3
+    .filter(d => d.brecha > 0)
+    .slice()
+    .sort((a, b) => b.brecha - a.brecha)
+    .slice(0, 10);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => {
+        const idx = p[0].dataIndex;
+        const d = data.slice().reverse()[idx];
+        return `<b>${d.nombre}</b><br/>` +
+               `Mínimo: <b style="color:#16a34a">${fmtMoney(d.min)}</b><br/>` +
+               `Máximo: <b style="color:#dc2626">${fmtMoney(d.max)}</b><br/>` +
+               `Brecha: <b>${fmtMoney(d.brecha)}</b>`;
+      }
+    },
+    legend: {
+      data: ['Mínimo', 'Máximo'],
+      top: 0,
+      textStyle: { fontSize: 11 }
+    },
+    grid: { left: '3%', right: '6%', bottom: '3%', top: '12%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { formatter: v => fmtMoneyCompact(v), color: '#64748b' },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: data.map(d => {
+        const n = d.nombre;
+        return n.length > 35 ? n.slice(0, 33) + '…' : n;
+      }).reverse(),
+      axisLabel: { color: '#475569', fontSize: 9 }
+    },
+    series: [
+      {
+        name: 'Mínimo',
+        type: 'bar',
+        data: data.map(d => d.min).reverse(),
+        barWidth: '30%',
+        itemStyle: { color: '#16a34a' }
+      },
+      {
+        name: 'Máximo',
+        type: 'bar',
+        data: data.map(d => d.max).reverse(),
+        barWidth: '30%',
+        itemStyle: { color: '#dc2626' }
+      }
+    ]
+  });
+  STATE.charts.brechas = chart;
+}
+
+/* =========================================================
+   GRÁFICOS - Empleados
+   ========================================================= */
+function renderChartEmpSecretarias() {
+  const el = document.getElementById('chartEmpSecretarias');
+  if (!el) return;
+  const map = {};
+  STATE.sheet1.forEach(e => {
+    map[e.secretaria] = (map[e.secretaria] || 0) + 1;
+  });
+  const data = Object.entries(map).map(([k, v]) => ({ name: k, value: v }));
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} empleados ({d}%)' },
+    legend: { bottom: 0, textStyle: { fontSize: 10 } },
+    series: [{
+      type: 'pie',
+      radius: ['35%', '65%'],
+      center: ['50%', '45%'],
+      itemStyle: { borderColor: '#fff', borderWidth: 2 },
+      label: { formatter: '{b}\n{d}%', fontSize: 10 },
+      data: data.map((d, i) => ({ ...d, itemStyle: { color: COLORS.palette[i % COLORS.palette.length] } }))
+    }]
+  });
+  STATE.charts.empSec = chart;
+}
+
+function renderChartEmpCargos() {
+  const el = document.getElementById('chartEmpCargos');
+  if (!el) return;
+  const map = {};
+  STATE.sheet1.forEach(e => {
+    map[e.cargo] = (map[e.cargo] || 0) + 1;
+  });
+  const data = Object.entries(map).map(([k, v]) => ({ name: k, value: v }))
+    .sort((a, b) => b.value - a.value);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.name),
+      axisLabel: { rotate: 25, fontSize: 10, color: '#64748b' }
+    },
+    yAxis: { type: 'value', axisLabel: { color: '#64748b' } },
+    series: [{
+      type: 'bar',
+      data: data.map((d, i) => ({ value: d.value, itemStyle: { color: COLORS.palette[i % COLORS.palette.length] } })),
+      barWidth: '50%',
+      label: { show: true, position: 'top', fontWeight: 600, color: '#0f4c75' }
+    }]
+  });
+  STATE.charts.empCargo = chart;
+}
+
+function renderChartEmpAnios() {
+  const el = document.getElementById('chartEmpAnios');
+  if (!el) return;
+  const map = {};
+  STATE.sheet1.forEach(e => {
+    let year = null;
+    if (e.fecha instanceof Date) year = e.fecha.getFullYear();
+    else if (typeof e.fecha === 'string') {
+      const d = new Date(e.fecha);
+      if (!isNaN(d)) year = d.getFullYear();
+    }
+    if (year) map[year] = (map[year] || 0) + 1;
+  });
+  const data = Object.entries(map).map(([k, v]) => ({ year: +k, count: v }))
+    .sort((a, b) => a.year - b.year);
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.year),
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
+    yAxis: { type: 'value', axisLabel: { color: '#64748b' } },
+    series: [{
+      type: 'line',
+      data: data.map(d => d.count),
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { color: COLORS.accent, width: 3 },
+      itemStyle: { color: COLORS.primary },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(50, 130, 184, 0.4)' },
+          { offset: 1, color: 'rgba(50, 130, 184, 0.02)' }
+        ])
+      },
+      label: { show: true, position: 'top', fontWeight: 600, color: '#0f4c75' }
+    }]
+  });
+  STATE.charts.empAnios = chart;
+}
+
+function renderChartEmpRangos() {
+  const el = document.getElementById('chartEmpRangos');
+  if (!el) return;
+  const rangos = [
+    { label: '< $4M', min: 0, max: 4000000 },
+    { label: '$4M - $6M', min: 4000000, max: 6000000 },
+    { label: '$6M - $8M', min: 6000000, max: 8000000 },
+    { label: '$8M - $10M', min: 8000000, max: 10000000 },
+    { label: '$10M - $12M', min: 10000000, max: 12000000 },
+    { label: '> $12M', min: 12000000, max: Infinity }
+  ];
+  const counts = rangos.map(r => ({
+    label: r.label,
+    count: STATE.sheet1.filter(e => e.bruto >= r.min && e.bruto < r.max).length
+  }));
+  const chart = echarts.init(el);
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => `<b>${p[0].name}</b><br/>${p[0].value} empleado(s)`
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: counts.map(c => c.label),
+      axisLabel: { color: '#64748b', fontSize: 11 }
+    },
+    yAxis: { type: 'value', axisLabel: { color: '#64748b' } },
+    series: [{
+      type: 'bar',
+      data: counts.map((c, i) => ({
+        value: c.count,
+        itemStyle: { color: COLORS.palette[i % COLORS.palette.length] }
+      })),
+      barWidth: '50%',
+      label: { show: true, position: 'top', fontWeight: 600, color: '#0f4c75' }
+    }]
+  });
+  STATE.charts.empRangos = chart;
+}
+
+/* =========================================================
+   TABLAS
+   ========================================================= */
+function renderTableSecretarias(filter = '') {
+  const tbody = document.getElementById('tbodySecretarias');
+  const total = STATE.sheet2.reduce((s, r) => s + r.total, 0);
+  const maxTotal = Math.max(...STATE.sheet2.map(r => r.total));
+
+  const filtered = STATE.sheet2.filter(r =>
+    r.nombre.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  // Aplicar ordenamiento
+  const sort = STATE.sortSecretarias;
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sort.col === 'idx') return 0;
+    if (sort.col === 'nombre') { av = a.nombre; bv = b.nombre; }
+    else if (sort.col === 'total') { av = a.total; bv = b.total; }
+    else if (sort.col === 'participacion') { av = a.total / total; bv = b.total / total; }
+    if (typeof av === 'string') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const pct = r.total / total;
+    const barWidth = (r.total / maxTotal * 100).toFixed(1);
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${r.nombre}</strong></td>
+        <td class="num">${fmtMoney(r.total)}</td>
+        <td class="num">${fmtPct(r.total, total)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+              <div style="width:${barWidth}%;height:100%;background:linear-gradient(90deg,${COLORS.accentLight},${COLORS.primary});"></div>
+            </div>
+            <span style="font-size:11px;color:#64748b;font-weight:600;">${barWidth}%</span>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('secretariasCount').textContent = filtered.length;
+}
+
+function renderTableCargos(filter = '', range = '') {
+  const tbody = document.getElementById('tbodyCargos');
+  let filtered = STATE.sheet3.filter(r =>
+    r.nombre.toLowerCase().includes(filter.toLowerCase())
+  );
+  if (range) {
+    filtered = filtered.filter(r => {
+      const t = r.total;
+      if (range === 'small') return t < 1000000;
+      if (range === 'medium') return t >= 1000000 && t < 10000000;
+      if (range === 'large') return t >= 10000000 && t < 100000000;
+      if (range === 'xlarge') return t >= 100000000;
+      return true;
+    });
+  }
+  const sort = STATE.sortCargos;
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sort.col === 'idx') return 0;
+    if (sort.col === 'nombre') { av = a.nombre; bv = b.nombre; }
+    else { av = a[sort.col]; bv = b[sort.col]; }
+    if (typeof av === 'string') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+  tbody.innerHTML = filtered.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.nombre}</td>
+      <td class="num">${fmtMoney(r.total)}</td>
+      <td class="num">${fmtMoney(r.min)}</td>
+      <td class="num">${fmtMoney(r.max)}</td>
+      <td class="num positive">${fmtMoney(r.brecha)}</td>
+    </tr>
+  `).join('');
+  document.getElementById('cargosCount').textContent = filtered.length;
+}
+
+function renderTableEmpleados(filter = '', sec = '') {
+  const tbody = document.getElementById('tbodyEmpleados');
+  const now = new Date();
+  let filtered = STATE.sheet1.filter(r => {
+    const matchText = !filter ||
+      r.nombre.toLowerCase().includes(filter.toLowerCase()) ||
+      r.cargo.toLowerCase().includes(filter.toLowerCase());
+    const matchSec = !sec || r.secretaria === sec;
+    return matchText && matchSec;
+  });
+  const sort = STATE.sortEmpleados;
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sort.col === 'idx') return 0;
+    if (sort.col === 'nombre' || sort.col === 'cargo' || sort.col === 'secretaria') {
+      av = a[sort.col]; bv = b[sort.col];
+      return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    if (sort.col === 'bruto') { av = a.bruto; bv = b.bruto; }
+    else if (sort.col === 'neto') { av = a.neto; bv = b.neto; }
+    else if (sort.col === 'retencion') { av = a.retencion; bv = b.retencion; }
+    else if (sort.col === 'antiguedad') {
+      av = a.fecha instanceof Date ? a.fecha : new Date(a.fecha);
+      bv = b.fecha instanceof Date ? b.fecha : new Date(b.fecha);
+    } else if (sort.col === 'ingreso') {
+      av = a.fecha instanceof Date ? a.fecha : new Date(a.fecha);
+      bv = b.fecha instanceof Date ? b.fecha : new Date(b.fecha);
+    }
+    if (av instanceof Date && bv instanceof Date) {
+      return sort.dir === 'asc' ? av - bv : bv - av;
+    }
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+  tbody.innerHTML = filtered.map((r, i) => {
+    let antiguedad = '—';
+    let yearNum = 0;
+    if (r.fecha instanceof Date) {
+      const diff = now - r.fecha;
+      yearNum = diff / (365.25 * 24 * 3600 * 1000);
+      antiguedad = yearNum.toFixed(1) + ' años';
+    }
+    const retPct = r.bruto ? (r.retencion / r.bruto * 100).toFixed(1) : 0;
+    const isHighEarner = r.bruto > 10000000;
+    return `
+      <tr ${isHighEarner ? 'class="highlight-row"' : ''}>
+        <td>${i + 1}</td>
+        <td><strong>${r.nombre}</strong></td>
+        <td>${r.cargo}</td>
+        <td><span class="badge primary">${r.secretaria}</span></td>
+        <td class="num">${fmtMoney(r.bruto)}</td>
+        <td class="num">${fmtMoney(r.neto)}</td>
+        <td class="num">${fmtMoney(r.retencion)} <span style="color:#94a3b8;font-size:11px;">(${retPct}%)</span></td>
+        <td style="text-align:right;">${fmtDate(r.fecha)}</td>
+        <td class="num">${antiguedad}</td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('empleadosCount').textContent = filtered.length;
+}
+
+/* =========================================================
+   TABULACIÓN / EVENTOS
+   ========================================================= */
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      // resize charts cuando se muestra el tab
+      setTimeout(() => {
+        Object.values(STATE.charts).forEach(c => c && c.resize && c.resize());
+      }, 50);
+    });
+  });
+}
+
+function initSorting() {
+  document.querySelectorAll('table.data-table thead th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      const isNum = th.dataset.num === 'true';
+      const tableId = th.closest('table').id;
+
+      let state;
+      if (tableId === 'tableSecretarias') state = STATE.sortSecretarias;
+      else if (tableId === 'tableCargos') state = STATE.sortCargos;
+      else if (tableId === 'tableEmpleados') state = STATE.sortEmpleados;
+      else return;
+
+      if (state.col === col) {
+        state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.col = col;
+        state.dir = isNum ? 'desc' : 'asc';
+      }
+      updateSortIcons(th);
+      refreshTables();
+    });
+  });
+}
+
+function updateSortIcons(activeTh) {
+  document.querySelectorAll('table.data-table thead th[data-sort] .sort-icon')
+    .forEach(s => s.remove());
+  const icon = document.createElement('span');
+  icon.className = 'sort-icon';
+  const state = STATE[{
+    'tableSecretarias': 'sortSecretarias',
+    'tableCargos': 'sortCargos',
+    'tableEmpleados': 'sortEmpleados'
+  }[activeTh.closest('table').id]];
+  icon.textContent = state.dir === 'asc' ? '▲' : '▼';
+  activeTh.appendChild(icon);
+}
+
+function refreshTables() {
+  renderTableSecretarias(document.getElementById('searchSecretarias').value);
+  renderTableCargos(
+    document.getElementById('searchCargos').value,
+    document.getElementById('filterCargos').value
+  );
+  renderTableEmpleados(
+    document.getElementById('searchEmpleados').value,
+    document.getElementById('filterEmpleadosSec').value
+  );
+}
+
+function initFilters() {
+  document.getElementById('searchSecretarias').addEventListener('input', e => {
+    renderTableSecretarias(e.target.value);
+  });
+  document.getElementById('searchCargos').addEventListener('input', e => {
+    renderTableCargos(e.target.value, document.getElementById('filterCargos').value);
+  });
+  document.getElementById('filterCargos').addEventListener('change', e => {
+    renderTableCargos(document.getElementById('searchCargos').value, e.target.value);
+  });
+  document.getElementById('searchEmpleados').addEventListener('input', e => {
+    renderTableEmpleados(e.target.value, document.getElementById('filterEmpleadosSec').value);
+  });
+  document.getElementById('filterEmpleadosSec').addEventListener('change', e => {
+    renderTableEmpleados(document.getElementById('searchEmpleados').value, e.target.value);
+  });
+
+  // Llenar select de secretarías (de Hoja1)
+  const select = document.getElementById('filterEmpleadosSec');
+  const secretarias = [...new Set(STATE.sheet1.map(e => e.secretaria))].sort();
+  secretarias.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    select.appendChild(opt);
+  });
+}
+
+function initFileInput() {
+  document.getElementById('fileInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('loadingOverlay').classList.add('show');
+    try {
+      const buf = await loadExcelFromInput(file);
+      await processWorkbook(buf);
+      renderAll();
+      document.getElementById('fileInfo').innerHTML =
+        `Archivo cargado: <strong>${file.name}</strong>`;
+      showToast('Excel cargado correctamente ✓', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al cargar el Excel: ' + err.message, 'error');
+    } finally {
+      document.getElementById('loadingOverlay').classList.remove('show');
+    }
+  });
+}
+
+function initResize() {
+  window.addEventListener('resize', () => {
+    Object.values(STATE.charts).forEach(c => c && c.resize && c.resize());
+  });
+}
+
+/* =========================================================
+   RENDER PRINCIPAL
+   ========================================================= */
+function renderAll() {
+  renderKPIs();
+  renderChartSecretariasBar();
+  renderChartSecretariasPie();
+  renderChartTopCargos();
+  renderChartTopCargosBar();
+  renderChartBrechas();
+  renderChartEmpSecretarias();
+  renderChartEmpCargos();
+  renderChartEmpAnios();
+  renderChartEmpRangos();
+  renderTableSecretarias();
+  renderTableCargos();
+  renderTableEmpleados();
+}
+
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
+async function init() {
+  initTabs();
+  initSorting();
+  initFileInput();
+  initResize();
+  // search/filter listeners se inicializan después de tener datos
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  // Intentar cargar el Excel desde la misma carpeta
+  const candidates = [
+    './Haberes2026.xlsx',
+    './download/Haberes2026.xlsx',
+    '../download/Haberes2026.xlsx',
+    '/download/Haberes2026.xlsx',
+    '/Haberes2026.xlsx'
+  ];
+  let loaded = false;
+  for (const url of candidates) {
+    try {
+      const buf = await loadExcelFromUrl(url);
+      await processWorkbook(buf);
+      loaded = true;
+      document.getElementById('fileInfo').innerHTML =
+        `Base de datos: <strong>Haberes2026.xlsx</strong>`;
+      document.getElementById('loadingDot').style.background = '#16a34a';
+      break;
+    } catch (err) {
+      continue;
+    }
+  }
+
+  if (!loaded) {
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('fileInfo').innerHTML =
+      `Sin Excel cargado · <strong>Seleccione archivo</strong>`;
+    document.getElementById('loadingDot').style.background = '#ea580c';
+    showToast('No se encontró Haberes2026.xlsx automáticamente. Use el botón "Cargar Excel".', 'error');
+    return;
+  }
+
+  initFilters();
+  renderAll();
+  document.getElementById('loadingOverlay').classList.remove('show');
+  showToast('Dashboard cargado · ' + STATE.sheet1.length + ' empleados, ' + STATE.sheet2.length + ' secretarías, ' + STATE.sheet3.length + ' cargos', 'success');
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
